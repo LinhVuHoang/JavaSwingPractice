@@ -1,6 +1,14 @@
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.table.DefaultTableModel;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
 
 public class View extends JFrame{
     private static final long serialVersionUID = 1L;
@@ -13,7 +21,10 @@ public class View extends JFrame{
     private  JTextArea Jcountry;
     private JScrollPane scrollPane;
     private  JButton addbtn;
-
+    private DefaultTableModel model;
+    private boolean check =false;
+    EmployeeController employeeController = new EmployeeController();
+//Xin vui lòng vào file porm.xml để chạy dependency trước khi chạy chương trình
     public static void main(String[] args) {
         EventQueue.invokeLater(new Runnable() {
             public void run() {
@@ -26,7 +37,7 @@ public class View extends JFrame{
             }
         });
     }
-    public View(){
+    public View() throws Exception {
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); // xét khi đóng ứng dụng cũng ừng chương trình
         setBounds(200, 150, 1400, 1200); // xét vị trí của frame
         setResizable(true); // cho phép kéo thả cửa sổ hay không
@@ -64,10 +75,9 @@ public class View extends JFrame{
         lblsex.setFont(new Font("Times New Roman",Font.PLAIN,20));
         lblsex.setBounds(40, 100, 273, 50);
         contentPane.add(lblsex);
-
         JMale = new JRadioButton("Nam");
         JMale.setFont(new Font("Tahoma", Font.PLAIN, 20));
-        JMale.setBounds(120,100,100,50);
+        JMale.setBounds(120,100,70,50);
         contentPane.add(JMale);
 
         JFemale = new JRadioButton("Nữ");
@@ -100,6 +110,7 @@ public class View extends JFrame{
         suabtn.setBounds(270, 360, 120, 73);
         contentPane.add(suabtn);
 
+
         JButton xoabtn = new JButton("Xoá");
         xoabtn.setFont(new Font("Tahoma", Font.PLAIN, 20));
         xoabtn.setBounds(400, 360, 120, 73);
@@ -116,20 +127,103 @@ public class View extends JFrame{
         boquabtn.setBounds(660, 360, 120, 73);
         boquabtn.setEnabled(false);
         contentPane.add(boquabtn);
-
+        boquabtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                luubtn.setEnabled(false);
+                check =false;
+                textName.setText("");
+                textBirth.setText("");
+                Jcountry.setText("");
+                JMale.setSelected(false);
+                JFemale.setSelected(false);
+                boquabtn.setEnabled(false);
+            }
+        });
         JButton thoatbtn = new JButton("Thoát");
         thoatbtn.setFont(new Font("Tahoma", Font.PLAIN, 20));
         thoatbtn.setBounds(790, 360, 120, 73);
         contentPane.add(thoatbtn);
+        thoatbtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                JOptionPane.showMessageDialog(thoatbtn,"Bạn đã Thoát chương trình");
+                dispose();
+            }
+        });
+        refreshTable();
 
-        String[][] data = {
-                { "1","Kundan Kumar Jha","23/09/2000", "Nam", "USA" },
-                { "2","Anand Jha", "09/10/1997","Nữ", "Japan" }
-        };
+        addbtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                luubtn.setEnabled(true);
+                boquabtn.setEnabled(true);
+                check =true;
+                textName.setText("");
+                textBirth.setText("");
+                Jcountry.setText("");
+                JMale.setSelected(false);
+                JFemale.setSelected(false);
+                textName.requestFocus();
+            }
+        });
+        luubtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String name = textName.getText();
+                String birthday = textBirth.getText();
+                String country = Jcountry.getText();
+                String sex="";
+                if(JMale.isSelected()){
+                    sex = "nam";
+                }else if(JFemale.isSelected()) {
+                    sex="nữ";
+                }
+                Employee employee = new Employee(name,birthday,sex,country);
+                try {
+                    employeeController.addEmployee(employee);
+                    model.fireTableDataChanged();
+                    JOptionPane.showConfirmDialog(luubtn,"Thêm nhân viên thành công");
+                    luubtn.setEnabled(false);
+                    check =false;
+                    textName.setText("");
+                    textBirth.setText("");
+                    Jcountry.setText("");
+                    JMale.setSelected(false);
+                    JFemale.setSelected(false);
+                    boquabtn.setEnabled(false);
+                    refreshTable();
+
+                } catch (SQLException ex) {
+                    ex.printStackTrace();
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                }
+            }
+        });
+
+    }
+    public void refreshTable() throws Exception {
         String[] columnNames = { "STT", "Họ và Tên","Ngày sinh", "Giới Tính","Quê Quán" };
-        jTable = new JTable(data,columnNames);
+        model = new DefaultTableModel();
+        model.setColumnIdentifiers(columnNames);
+        int id;String name,birthday,sex,country;
+        ArrayList<Employee> employees = new ArrayList<>();
+        employees = employeeController.getAllEmployees();
+        for(int i=0;i<employees.size();i++){
+            Employee employee = employees.get(i);
+            System.out.println(employee.toString());
+            id = employee.getId();
+            name = employee.getName();
+            birthday = employee.getBirthday();
+            sex = employee.getSex();
+            country = employee.getCountry();
+            model.addRow(new Object[]{i+1,name,birthday,sex,country});
+        }
+        jTable = new JTable();
+        jTable.setModel(model);
         jTable.setFont(new Font("Tahoma", Font.PLAIN, 24));
-       // jTable.setBounds(40, 450, 1200, 400);
+        // jTable.setBounds(40, 450, 1200, 400);
         jTable.setAutoCreateRowSorter(false);
         jTable.setRowHeight(50);
         jTable.getTableHeader().setFont(new Font("Tahoma", Font.PLAIN, 24));
@@ -138,10 +232,28 @@ public class View extends JFrame{
         jTable.getColumnModel().getColumn(2).setMinWidth(300);
         jTable.getColumnModel().getColumn(3).setMinWidth(100);
         jTable.getColumnModel().getColumn(4).setMinWidth(300);
-
         JScrollPane scrollPane1 = new JScrollPane(jTable);
         scrollPane1.setBounds(40, 450, 1200, 400);
         contentPane.add(scrollPane1);
-
-    }
+            jTable.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mouseClicked(java.awt.event.MouseEvent evt) {
+                    if (check == false) {
+                        int index = jTable.getSelectedRow();
+                        textName.setText((String) model.getValueAt(index, 1));
+                        textBirth.setText((String) model.getValueAt(index, 2));
+                        Jcountry.setText((String) model.getValueAt(index, 4));
+                        String checksex = (String) model.getValueAt(index, 3);
+                        System.out.println(checksex);
+                        if (checksex.length() == 3) {
+                            JMale.setSelected(true);
+                            JFemale.setSelected(false);
+                        } else {
+                            JFemale.setSelected(true);
+                            JMale.setSelected(false);
+                        }
+                    }
+                }
+            });
+        }
 }
