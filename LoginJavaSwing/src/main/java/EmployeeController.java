@@ -54,7 +54,7 @@ public class EmployeeController {
             String SQL = "insert into employee(name,birthday,sex,country) values(?,?,?,?)";
             conn = DBConnectionTest.getConnection();
             stmt = conn.prepareStatement(SQL);
-            stmt.setString(1,employee.getName());
+            stmt.setString(1,employee.getName()); //index bắt đầu từ 1
             stmt.setString(2,employee.getBirthday());
             stmt.setString(3,employee.getSex());
             stmt.setString(4,employee.getCountry());
@@ -69,5 +69,30 @@ public class EmployeeController {
                 throw new SQLException(e.getMessage());
             }
         }
+    }
+    public boolean updateEmployee(Employee employee) throws SQLException{
+        PreparedStatement stmt = null;
+        Connection cnn = null;
+        try {
+            String SQL = "UPDATE employee set name =?,birthday=?,sex=?,country =? where id =?";
+            cnn = DBConnectionTest.getConnection();
+            stmt = cnn.prepareStatement(SQL);
+            stmt.setString(1,employee.getName());
+            stmt.setString(2,employee.getBirthday());
+            stmt.setString(3,employee.getSex());
+            stmt.setString(4,employee.getCountry());
+            stmt.setInt(5,employee.getId());
+            stmt.executeUpdate();
+        }catch (SQLException e){
+            throw new SQLException(e.getMessage());
+        }finally {
+            try {
+                stmt.close();
+                cnn.close();
+            }catch (Exception e){
+                throw new SQLException(e.getMessage());
+            }
+        }
+        return true;
     }
 }

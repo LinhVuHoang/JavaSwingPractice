@@ -1,6 +1,9 @@
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
+import javax.swing.table.AbstractTableModel;
+import javax.swing.table.DefaultTableCellRenderer;
 import javax.swing.table.DefaultTableModel;
+import javax.swing.table.JTableHeader;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -9,6 +12,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.List;
 
 public class View extends JFrame{
     private static final long serialVersionUID = 1L;
@@ -23,6 +27,9 @@ public class View extends JFrame{
     private  JButton addbtn;
     private DefaultTableModel model;
     private boolean check =false;
+    private  int idupdate;
+    private  int idcheck;
+    private boolean updatesuccess;
     EmployeeController employeeController = new EmployeeController();
 //Xin vui lòng vào file porm.xml để chạy dependency trước khi chạy chương trình
     public static void main(String[] args) {
@@ -77,12 +84,12 @@ public class View extends JFrame{
         contentPane.add(lblsex);
         JMale = new JRadioButton("Nam");
         JMale.setFont(new Font("Tahoma", Font.PLAIN, 20));
-        JMale.setBounds(120,100,70,50);
+        JMale.setBounds(120,100,100,50);
         contentPane.add(JMale);
 
         JFemale = new JRadioButton("Nữ");
         JFemale.setFont(new Font("Tahoma", Font.PLAIN, 20));
-        JFemale.setBounds(200,100,100,50);
+        JFemale.setBounds(230,100,100,50);
         contentPane.add(JFemale);
 
         JLabel lblcountry =  new JLabel("Quê quán:");
@@ -151,7 +158,6 @@ public class View extends JFrame{
                 dispose();
             }
         });
-        refreshTable();
 
         addbtn.addActionListener(new ActionListener() {
             @Override
@@ -201,59 +207,125 @@ public class View extends JFrame{
                 }
             }
         });
+        suabtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String name = textName.getText();
+                String birthday = textBirth.getText();
+                String country = Jcountry.getText();
+                String sex ="";
+                if(JMale.isSelected()){
+                    sex ="Nam";
+                }else if(JFemale.isSelected()){
+                    sex= "Nữ";
+                }
+                ArrayList<Employee> employees = null;
+                try {
+                     employees = employeeController.getAllEmployees();
+                } catch (Exception ex) {
+                    throw new RuntimeException(ex);
+                }
+                for (int i=0;i<employees.size();i++){
+                    if(i==idcheck){
+                        Employee employee = employees.get(i);
+                        idupdate =employee.getId();
+                    }
+                }
+                Employee employee = new Employee(idupdate,name,birthday,sex,country);
+                try {
+                     updatesuccess =employeeController.updateEmployee(employee);
+                    if(updatesuccess) {
+                        JOptionPane.showConfirmDialog(suabtn, "Cập nhật nhân viên thành công");
+                        textName.setText(null);
+                        textBirth.setText(null);
+                        JMale.setSelected(false);
+                        JFemale.setSelected(false);
+                        Jcountry.setText(null);
+                        jTable = null;
+                        refreshTable();
+                    }
+                } catch (Exception ex) {
+                    ex.printStackTrace();
+                    throw new RuntimeException(ex);
+                }
+            }
+        });
+        refreshTable();
 
     }
     public void refreshTable() throws Exception {
-        String[] columnNames = { "STT", "Họ và Tên","Ngày sinh", "Giới Tính","Quê Quán" };
-        model = new DefaultTableModel();
-        model.setColumnIdentifiers(columnNames);
-        int id;String name,birthday,sex,country;
-        ArrayList<Employee> employees = new ArrayList<>();
-        employees = employeeController.getAllEmployees();
-        for(int i=0;i<employees.size();i++){
-            Employee employee = employees.get(i);
-            System.out.println(employee.toString());
-            id = employee.getId();
-            name = employee.getName();
-            birthday = employee.getBirthday();
-            sex = employee.getSex();
-            country = employee.getCountry();
-            model.addRow(new Object[]{i+1,name,birthday,sex,country});
+        loadData();
+        if(updatesuccess){
+            jTable.removeAll();
+            loadData();
         }
-        jTable = new JTable();
-        jTable.setModel(model);
-        jTable.setFont(new Font("Tahoma", Font.PLAIN, 24));
-        // jTable.setBounds(40, 450, 1200, 400);
-        jTable.setAutoCreateRowSorter(false);
-        jTable.setRowHeight(50);
-        jTable.getTableHeader().setFont(new Font("Tahoma", Font.PLAIN, 24));
-        jTable.getColumnModel().getColumn(0).setMinWidth(50);
-        jTable.getColumnModel().getColumn(1).setMinWidth(300);
-        jTable.getColumnModel().getColumn(2).setMinWidth(300);
-        jTable.getColumnModel().getColumn(3).setMinWidth(100);
-        jTable.getColumnModel().getColumn(4).setMinWidth(300);
-        JScrollPane scrollPane1 = new JScrollPane(jTable);
-        scrollPane1.setBounds(40, 450, 1200, 400);
-        contentPane.add(scrollPane1);
             jTable.addMouseListener(new java.awt.event.MouseAdapter() {
                 @Override
                 public void mouseClicked(java.awt.event.MouseEvent evt) {
                     if (check == false) {
-                        int index = jTable.getSelectedRow();
-                        textName.setText((String) model.getValueAt(index, 1));
-                        textBirth.setText((String) model.getValueAt(index, 2));
-                        Jcountry.setText((String) model.getValueAt(index, 4));
-                        String checksex = (String) model.getValueAt(index, 3);
-                        System.out.println(checksex);
-                        if (checksex.length() == 3) {
-                            JMale.setSelected(true);
-                            JFemale.setSelected(false);
-                        } else {
-                            JFemale.setSelected(true);
-                            JMale.setSelected(false);
+                        final int index = jTable.rowAtPoint(evt.getPoint());
+                        idcheck = index;
+                        System.out.println(index);
+                        if (index != -1) {
+                            textName.setText((String) model.getValueAt(index, 1));
+                            textBirth.setText((String) model.getValueAt(index, 2));
+                            Jcountry.setText((String) model.getValueAt(index, 4));
+                            String checksex = (String) model.getValueAt(index, 3);
+                            System.out.println(checksex);
+                            if (checksex.length() == 3) {
+                                JMale.setSelected(true);
+                                JFemale.setSelected(false);
+                            } else {
+                                JFemale.setSelected(true);
+                                JMale.setSelected(false);
+                            }
+
                         }
                     }
                 }
             });
+        }
+        public void loadData() throws Exception {
+            String[] columnNames = {"STT", "Họ và Tên", "Ngày sinh", "Giới Tính", "Quê Quán"};
+            model = new DefaultTableModel();
+            model.setColumnIdentifiers(columnNames);
+            int id;
+            String name, birthday, sex, country;
+
+            ArrayList<Employee> employees = employeeController.getAllEmployees();
+            model.fireTableDataChanged();
+            for (int i = 0; i < employees.size(); i++) {
+                Employee employee = employees.get(i);
+                System.out.println(employee.toString());
+                id = employee.getId();
+                name = employee.getName();
+                birthday = employee.getBirthday();
+                sex = employee.getSex();
+                country = employee.getCountry();
+                model.addRow(new Object[]{i + 1, name, birthday, sex, country});
+            }
+            jTable = new JTable(model);
+            jTable.setFont(new Font("Tahoma", Font.PLAIN, 24));
+            JTableHeader header = jTable.getTableHeader(); // lấy table header
+            DefaultTableCellRenderer cellRenderer = new DefaultTableCellRenderer(); // tạo render default cho table
+            cellRenderer.setHorizontalAlignment(JLabel.CENTER); //set render center cho JLabel
+            header.setDefaultRenderer(cellRenderer); //set center cho header
+            jTable.getColumnModel().getColumn(0).setCellRenderer(cellRenderer);
+            jTable.getColumnModel().getColumn(1).setCellRenderer(cellRenderer);
+            jTable.getColumnModel().getColumn(2).setCellRenderer(cellRenderer);
+            jTable.getColumnModel().getColumn(3).setCellRenderer(cellRenderer);
+            jTable.getColumnModel().getColumn(4).setCellRenderer(cellRenderer);
+            // jTable.setBounds(40, 450, 1200, 400);
+            jTable.setAutoCreateRowSorter(false);
+            jTable.setRowHeight(50);
+            jTable.getTableHeader().setFont(new Font("Tahoma", Font.PLAIN, 24));
+            jTable.getColumnModel().getColumn(0).setMinWidth(50);
+            jTable.getColumnModel().getColumn(1).setMinWidth(300);
+            jTable.getColumnModel().getColumn(2).setMinWidth(300);
+            jTable.getColumnModel().getColumn(3).setMinWidth(100);
+            jTable.getColumnModel().getColumn(4).setMinWidth(300);
+            JScrollPane scrollPane1 = new JScrollPane(jTable);
+            scrollPane1.setBounds(40, 450, 1200, 400);
+            contentPane.add(scrollPane1);
         }
 }
