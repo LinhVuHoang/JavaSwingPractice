@@ -70,6 +70,7 @@ public class EmployeeController {
             }
         }
     }
+
     public boolean updateEmployee(Employee employee) throws SQLException{
         PreparedStatement stmt = null;
         Connection cnn = null;
@@ -82,6 +83,27 @@ public class EmployeeController {
             stmt.setString(3,employee.getSex());
             stmt.setString(4,employee.getCountry());
             stmt.setInt(5,employee.getId());
+            stmt.executeUpdate();
+        }catch (SQLException e){
+            throw new SQLException(e.getMessage());
+        }finally {
+            try {
+                stmt.close();
+                cnn.close();
+            }catch (Exception e){
+                throw new SQLException(e.getMessage());
+            }
+        }
+        return true;
+    }
+    public boolean deleteEmployee(int id) throws SQLException{
+        PreparedStatement stmt = null;
+        Connection cnn = null;
+        try {
+            String SQL = "delete from employee where id =?";
+            cnn = DBConnectionTest.getConnection();
+            stmt = cnn.prepareStatement(SQL);
+            stmt.setInt(1,id);
             stmt.executeUpdate();
         }catch (SQLException e){
             throw new SQLException(e.getMessage());

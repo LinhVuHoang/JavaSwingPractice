@@ -1,12 +1,11 @@
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
-import javax.swing.table.AbstractTableModel;
-import javax.swing.table.DefaultTableCellRenderer;
-import javax.swing.table.DefaultTableModel;
-import javax.swing.table.JTableHeader;
+import javax.swing.table.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -24,13 +23,14 @@ public class View extends JFrame{
     private JRadioButton JFemale;
     private  JTextArea Jcountry;
     private JScrollPane scrollPane;
+    private JScrollPane scrollPane1;
     private  JButton addbtn;
     private DefaultTableModel model;
     private boolean check =false;
     private  int idupdate;
     private  int idcheck;
-    private boolean updatesuccess;
     EmployeeController employeeController = new EmployeeController();
+    Validate validate = new Validate();
 //Xin vui lòng vào file porm.xml để chạy dependency trước khi chạy chương trình
     public static void main(String[] args) {
         EventQueue.invokeLater(new Runnable() {
@@ -45,6 +45,7 @@ public class View extends JFrame{
         });
     }
     public View() throws Exception {
+        //giao diện
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE); // xét khi đóng ứng dụng cũng ừng chương trình
         setBounds(200, 150, 1400, 1200); // xét vị trí của frame
         setResizable(true); // cho phép kéo thả cửa sổ hay không
@@ -82,6 +83,7 @@ public class View extends JFrame{
         lblsex.setFont(new Font("Times New Roman",Font.PLAIN,20));
         lblsex.setBounds(40, 100, 273, 50);
         contentPane.add(lblsex);
+
         JMale = new JRadioButton("Nam");
         JMale.setFont(new Font("Tahoma", Font.PLAIN, 20));
         JMale.setBounds(120,100,100,50);
@@ -134,30 +136,34 @@ public class View extends JFrame{
         boquabtn.setBounds(660, 360, 120, 73);
         boquabtn.setEnabled(false);
         contentPane.add(boquabtn);
-        boquabtn.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                luubtn.setEnabled(false);
-                check =false;
-                textName.setText("");
-                textBirth.setText("");
-                Jcountry.setText("");
-                JMale.setSelected(false);
-                JFemale.setSelected(false);
-                boquabtn.setEnabled(false);
-            }
-        });
+
         JButton thoatbtn = new JButton("Thoát");
         thoatbtn.setFont(new Font("Tahoma", Font.PLAIN, 20));
         thoatbtn.setBounds(790, 360, 120, 73);
         contentPane.add(thoatbtn);
-        thoatbtn.addActionListener(new ActionListener() {
+
+//function button
+
+        //radiobutton
+
+        JMale.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                JOptionPane.showMessageDialog(thoatbtn,"Bạn đã Thoát chương trình");
-                dispose();
+                if(JMale.isSelected()){
+                    JFemale.setSelected(false);
+                }
             }
         });
+        JFemale.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if(JFemale.isSelected()){
+                    JMale.setSelected(false);
+                }
+            }
+        });
+
+        //add button
 
         addbtn.addActionListener(new ActionListener() {
             @Override
@@ -173,55 +179,73 @@ public class View extends JFrame{
                 textName.requestFocus();
             }
         });
-        luubtn.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                String name = textName.getText();
-                String birthday = textBirth.getText();
-                String country = Jcountry.getText();
-                String sex="";
-                if(JMale.isSelected()){
-                    sex = "nam";
-                }else if(JFemale.isSelected()) {
-                    sex="nữ";
-                }
-                Employee employee = new Employee(name,birthday,sex,country);
-                try {
-                    employeeController.addEmployee(employee);
-                    model.fireTableDataChanged();
-                    JOptionPane.showConfirmDialog(luubtn,"Thêm nhân viên thành công");
-                    luubtn.setEnabled(false);
-                    check =false;
-                    textName.setText("");
-                    textBirth.setText("");
-                    Jcountry.setText("");
-                    JMale.setSelected(false);
-                    JFemale.setSelected(false);
-                    boquabtn.setEnabled(false);
-                    refreshTable();
 
-                } catch (SQLException ex) {
-                    ex.printStackTrace();
-                } catch (Exception ex) {
-                    ex.printStackTrace();
-                }
-            }
-        });
+
+        //update button
+
         suabtn.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 String name = textName.getText();
                 String birthday = textBirth.getText();
                 String country = Jcountry.getText();
-                String sex ="";
-                if(JMale.isSelected()){
-                    sex ="Nam";
-                }else if(JFemale.isSelected()){
-                    sex= "Nữ";
+                String sex = "";
+                if (JMale.isSelected()) {
+                    sex = "Nam";
+                } else if (JFemale.isSelected()) {
+                    sex = "Nữ";
                 }
                 ArrayList<Employee> employees = null;
+                if (!validate.isName(name)) {
+                    JOptionPane.showMessageDialog(null, "Tên chỉ được từ 7 đến 25 ký tự bao gồm dấu cách và không chứa ký tự số hoặc ký tự đặc biệt","Thông Báo",JOptionPane.OK_OPTION);
+                    textName.requestFocus();
+                } else if (!validate.isDate(birthday)) {
+                    JOptionPane.showMessageDialog(null, "Ngày được định dạng theo kiểu DD/MM/YYYY","Thông Báo",JOptionPane.OK_OPTION);
+                    textBirth.requestFocus();
+                } else if (!JMale.isSelected() && !JFemale.isSelected()) {
+                    JOptionPane.showMessageDialog(null, "Xin mời chọn giới tính","Thông Báo",JOptionPane.OK_OPTION);
+                } else if (!validate.isCountry(country)) {
+                    JOptionPane.showMessageDialog(null, "Xin mời nhập quê quán","Thông Báo",JOptionPane.OK_OPTION);
+                    Jcountry.requestFocus();
+                } else {
+                    try {
+                        employees = employeeController.getAllEmployees();
+                    } catch (Exception ex) {
+                        throw new RuntimeException(ex);
+                    }
+                    for (int i = 0; i < employees.size(); i++) {
+                        if (i == idcheck) {
+                            Employee employee = employees.get(i);
+                            idupdate = employee.getId();
+                        }
+                    }
+                    Employee employee = new Employee(idupdate, name, birthday, sex, country);
+                    try {
+                        employeeController.updateEmployee(employee);
+                        JOptionPane.showMessageDialog(null, "Cập nhật nhân viên thành công","Thông Báo",JOptionPane.INFORMATION_MESSAGE);
+                        textName.setText(null);
+                        textBirth.setText(null);
+                        JMale.setSelected(false);
+                        JFemale.setSelected(false);
+                        Jcountry.setText(null);
+                        refreshTable();
+                        loadData();
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                        throw new RuntimeException(ex);
+                    }
+                }
+            }
+        });
+
+        //delete button
+
+        xoabtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                ArrayList<Employee> employees = null;
                 try {
-                     employees = employeeController.getAllEmployees();
+                    employees = employeeController.getAllEmployees();
                 } catch (Exception ex) {
                     throw new RuntimeException(ex);
                 }
@@ -231,18 +255,21 @@ public class View extends JFrame{
                         idupdate =employee.getId();
                     }
                 }
-                Employee employee = new Employee(idupdate,name,birthday,sex,country);
                 try {
-                     updatesuccess =employeeController.updateEmployee(employee);
-                    if(updatesuccess) {
-                        JOptionPane.showConfirmDialog(suabtn, "Cập nhật nhân viên thành công");
+                    int checkdel=JOptionPane.showConfirmDialog(null,"Bạn muốn xóa nhân viên này","Thông Báo",JOptionPane.YES_NO_OPTION);
+                    if(checkdel == JOptionPane.OK_OPTION) {
+                        employeeController.deleteEmployee(idupdate);
+                        JOptionPane.showMessageDialog(null, "Xóa nhân viên thành công", "Thông Báo", JOptionPane.INFORMATION_MESSAGE);
                         textName.setText(null);
                         textBirth.setText(null);
                         JMale.setSelected(false);
                         JFemale.setSelected(false);
                         Jcountry.setText(null);
-                        jTable = null;
                         refreshTable();
+                        loadData();
+                    }else {
+                        refreshTable();
+                        loadData();
                     }
                 } catch (Exception ex) {
                     ex.printStackTrace();
@@ -250,66 +277,121 @@ public class View extends JFrame{
                 }
             }
         });
-        refreshTable();
 
-    }
-    public void refreshTable() throws Exception {
-        loadData();
-        if(updatesuccess){
-            jTable.removeAll();
-            loadData();
-        }
-            jTable.addMouseListener(new java.awt.event.MouseAdapter() {
-                @Override
-                public void mouseClicked(java.awt.event.MouseEvent evt) {
-                    if (check == false) {
-                        final int index = jTable.rowAtPoint(evt.getPoint());
-                        idcheck = index;
-                        System.out.println(index);
-                        if (index != -1) {
-                            textName.setText((String) model.getValueAt(index, 1));
-                            textBirth.setText((String) model.getValueAt(index, 2));
-                            Jcountry.setText((String) model.getValueAt(index, 4));
-                            String checksex = (String) model.getValueAt(index, 3);
-                            System.out.println(checksex);
-                            if (checksex.length() == 3) {
-                                JMale.setSelected(true);
-                                JFemale.setSelected(false);
-                            } else {
-                                JFemale.setSelected(true);
-                                JMale.setSelected(false);
-                            }
+        //boqua button
 
-                        }
+        boquabtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                luubtn.setEnabled(false);
+                check =false;
+                textName.setText("");
+                textBirth.setText("");
+                Jcountry.setText("");
+                JMale.setSelected(false);
+                JFemale.setSelected(false);
+                boquabtn.setEnabled(false);
+            }
+        });
+
+        //save button
+
+        luubtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                String name = textName.getText();
+                String birthday = textBirth.getText();
+                String country = Jcountry.getText();
+                String sex="";
+                if(JMale.isSelected()){
+                    sex = "Nam";
+                }else if(JFemale.isSelected()) {
+                    sex="Nữ";
+                }
+                Employee employee = new Employee(name,birthday,sex,country);
+                if(!validate.isName(name)){
+                    JOptionPane.showMessageDialog(null,"Tên chỉ được từ 7 đến 25 ký tự bao gồm dấu cách và không chứa ký tự số hoặc ký tự đặc biệt","Thông Báo",JOptionPane.OK_OPTION);
+                    textName.requestFocus();
+                }else if(!validate.isDate(birthday)){
+                    JOptionPane.showMessageDialog(null,"Ngày được định dạng theo kiểu DD/MM/YYYY","Thông Báo",JOptionPane.OK_OPTION);
+                    textBirth.requestFocus();
+                }else if(!JMale.isSelected() && !JFemale.isSelected()){
+                    JOptionPane.showMessageDialog(null,"Xin mời chọn giới tính","Thông Báo",JOptionPane.OK_OPTION);
+                }else if(!validate.isCountry(country)){
+                    JOptionPane.showMessageDialog(null,"Xin mời nhập quê quán","Thông Báo",JOptionPane.OK_OPTION);
+                    Jcountry.requestFocus();
+                }
+                else {
+                    try {
+                        employeeController.addEmployee(employee);
+                        JOptionPane.showMessageDialog(null,"Thêm nhân viên thành công","Thông Báo",JOptionPane.INFORMATION_MESSAGE);
+                        luubtn.setEnabled(false);
+                        check =false;
+                        textName.setText("");
+                        textBirth.setText("");
+                        Jcountry.setText("");
+                        JMale.setSelected(false);
+                        JFemale.setSelected(false);
+                        boquabtn.setEnabled(false);
+                        refreshTable();
+                        loadData();
+                    } catch (SQLException ex) {
+                        ex.printStackTrace();
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
                     }
                 }
-            });
+
+
+            }
+        });
+
+        //exit button
+
+        thoatbtn.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+              int checkout=  JOptionPane.showConfirmDialog(null,"Bạn muốn thoát chương trình?","Thông Báo",JOptionPane.YES_NO_OPTION);
+              if(checkout==JOptionPane.OK_OPTION) {
+                  JOptionPane.showMessageDialog(null, "Bạn đã Thoát chương trình", "Thông Báo", JOptionPane.INFORMATION_MESSAGE);
+                  dispose();
+              }
+            }
+        });
+
+        //loadData table
+        loadData();
+    }
+    //refresh table
+    public void refreshTable() throws Exception {
+        contentPane.remove(jTable); // phải remove để add lại tránh tình trạng bị ghi đè
+        contentPane.remove(scrollPane1);
         }
-        public void loadData() throws Exception {
+
+    //table ( lưu ý phải có JscrollPane thì mới có thể hiện tên cột ( column name);
+
+    public void loadData() throws Exception {
             String[] columnNames = {"STT", "Họ và Tên", "Ngày sinh", "Giới Tính", "Quê Quán"};
             model = new DefaultTableModel();
             model.setColumnIdentifiers(columnNames);
-            int id;
             String name, birthday, sex, country;
-
             ArrayList<Employee> employees = employeeController.getAllEmployees();
-            model.fireTableDataChanged();
             for (int i = 0; i < employees.size(); i++) {
                 Employee employee = employees.get(i);
                 System.out.println(employee.toString());
-                id = employee.getId();
                 name = employee.getName();
                 birthday = employee.getBirthday();
                 sex = employee.getSex();
                 country = employee.getCountry();
                 model.addRow(new Object[]{i + 1, name, birthday, sex, country});
             }
-            jTable = new JTable(model);
+            jTable = new JTable();
             jTable.setFont(new Font("Tahoma", Font.PLAIN, 24));
             JTableHeader header = jTable.getTableHeader(); // lấy table header
             DefaultTableCellRenderer cellRenderer = new DefaultTableCellRenderer(); // tạo render default cho table
             cellRenderer.setHorizontalAlignment(JLabel.CENTER); //set render center cho JLabel
             header.setDefaultRenderer(cellRenderer); //set center cho header
+            jTable.setModel(model);
             jTable.getColumnModel().getColumn(0).setCellRenderer(cellRenderer);
             jTable.getColumnModel().getColumn(1).setCellRenderer(cellRenderer);
             jTable.getColumnModel().getColumn(2).setCellRenderer(cellRenderer);
@@ -324,8 +406,28 @@ public class View extends JFrame{
             jTable.getColumnModel().getColumn(2).setMinWidth(300);
             jTable.getColumnModel().getColumn(3).setMinWidth(100);
             jTable.getColumnModel().getColumn(4).setMinWidth(300);
-            JScrollPane scrollPane1 = new JScrollPane(jTable);
+            scrollPane1 = new JScrollPane(jTable);
             scrollPane1.setBounds(40, 450, 1200, 400);
             contentPane.add(scrollPane1);
+            jTable.addMouseListener(new java.awt.event.MouseAdapter() {
+                @Override
+                public void mouseClicked(java.awt.event.MouseEvent evt) {
+                    if (check == false) {
+                        final int index = jTable.rowAtPoint(evt.getPoint());
+                        idcheck = index;
+                        textName.setText((String) model.getValueAt(index, 1));
+                        textBirth.setText((String) model.getValueAt(index, 2));
+                        Jcountry.setText((String) model.getValueAt(index, 4));
+                        String checksex = (String) model.getValueAt(index, 3);
+                        if (checksex.length() == 3) {
+                            JMale.setSelected(true);
+                            JFemale.setSelected(false);
+                        } else {
+                            JFemale.setSelected(true);
+                            JMale.setSelected(false);
+                        }
+                    }
+                }
+            });
         }
 }
